@@ -299,8 +299,9 @@ carousel.addEventListener('mouseup', (e) => {
     
     if (Math.abs(distance) > 20) {
         let direction = distance > 0 ? -1 : 1;
-        // 放寬條件：時間 < 600ms，距離 > 30px
-        let isFastSwipe = swipeTime < 600 && Math.abs(distance) > 30;
+        // 快滑(拉霸)條件：接觸時間短 (小於 300ms) 且 滑動距離短 (介於 20px 到 150px 之間)
+        // 若時間長或距離長，則視為一般滑動
+        let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 20 && Math.abs(distance) < 150;
         
         if (isForceModeActive || isFastSwipe) {
             // 中斷原生的慣性滑動
@@ -339,8 +340,9 @@ carousel.addEventListener('touchend', e => {
     
     if (Math.abs(distance) > 20) {
         let direction = distance > 0 ? -1 : 1;
-        // 放寬條件：時間 < 600ms，距離 > 30px
-        let isFastSwipe = swipeTime < 600 && Math.abs(distance) > 30;
+        // 快滑(拉霸)條件：接觸時間短 (小於 300ms) 且 滑動距離短 (介於 20px 到 150px 之間)
+        // 若時間長或距離長，則視為一般滑動
+        let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 20 && Math.abs(distance) < 150;
         
         if (isForceModeActive || isFastSwipe) {
             // 中斷原生的慣性滑動
