@@ -54,7 +54,7 @@ let isForceModeActive = false;
 
 function spinCarousel(direction) {
     const itemWidth = carousel.clientWidth;
-    const cardsToSpin = 8; // 張數改為 8 張，配合 cubic 曲線讓起步時不會快到看不清
+    const cardsToSpin = 12; // 張數改回 12 張，維持足夠的距離感
     
     const startScroll = carousel.scrollLeft;
     let currentIndex = Math.round(startScroll / itemWidth);
