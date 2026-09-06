@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Magic Card Selection</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap" rel="stylesheet">
+</head>
+
+<body class="theme-default">
+    <div id="app">
+        <!-- 階段一：選牌 Carousel -->
+        <div id="phase1" class="phase-container active">
+            <div class="carousel" id="carousel">
+                <!-- JavaScript 會在這裡動態產生撲克牌 -->
+            </div>
+        </div>
+
+        <!-- 隱藏的觸發區 (底部) -->
+        <div id="secret-trigger"></div>
+
+        <!-- 設定按鈕 (隱藏式，需雙擊) -->
+        <div id="settings-btn"></div>
+
+        <!-- 設定 Modal -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <h3>後台設定</h3>
+                <select id="theme-select">
+                    <option value="theme-balloon">造型氣球</option>
+                    <option value="theme-custom">自訂圖片</option>
+                </select>
+                <div id="force-card-settings" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444;">
+                    <label style="color: #ccc; font-size: 14px; display: block; margin-bottom: 5px; text-align: left;">強制設定 (短按觸發)</label>
+                    <select id="force-card-select">
+                        <option value="none">無 (不強制)</option>
+                    </select>
+                </div>
+                <div id="custom-image-settings" style="display: none; margin-top: 15px;">
+                    <input type="file" id="custom-image-input" multiple accept="image/*" style="display: none;">
+                    <button id="btn-upload-custom"
+                        style="width: 100%; background: #007aff; color: white; padding: 12px; border: none; border-radius: 8px; cursor: pointer;">新增圖片</button>
+                    <div id="custom-image-count"
+                        style="margin-top: 10px; font-size: 14px; text-align: center; color: #ccc;">目前已上傳: 0 張</div>
+                    <div id="custom-image-list"
+                        style="margin-top: 10px; max-height: 150px; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-right: 5px;">
+                    </div>
+                </div>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button id="btn-close-settings"
+                        style="width: 100%; background: #444; color: white; padding: 12px; border: none; border-radius: 8px; cursor: pointer;">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
