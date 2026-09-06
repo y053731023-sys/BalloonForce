@@ -53,8 +53,8 @@ let swipeStartTime = 0;
 let isForceModeActive = false;
 
 function spinCarousel(direction) {
-    const itemWidth = window.innerWidth;
-    const cardsToSpin = 15; 
+    const itemWidth = carousel.clientWidth;
+    const cardsToSpin = 8; 
     
     if (isForceModeActive) {
         const forceSelect = document.getElementById('force-card-select');
