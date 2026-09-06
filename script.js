@@ -86,10 +86,18 @@ function spinCarousel(direction) {
         isForceModeActive = false;
     }
 
+    // 關閉 snap 避免 iOS 上產生捲動衝突導致中途卡住
+    carousel.style.scrollSnapType = 'none';
+
     carousel.scrollBy({
         left: itemWidth * cardsToSpin * direction,
         behavior: 'smooth'
     });
+
+    // 動畫結束後重新開啟 snap
+    setTimeout(() => {
+        carousel.style.scrollSnapType = 'x mandatory';
+    }, 800);
 }
 
 const observer = new IntersectionObserver((entries) => {
@@ -294,6 +302,10 @@ carousel.addEventListener('mouseup', (e) => {
         let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 50;
         
         if (isForceModeActive || isFastSwipe) {
+            // 中斷原生的慣性滑動
+            carousel.style.overflowX = 'hidden';
+            void carousel.offsetWidth;
+            carousel.style.overflowX = 'auto';
             spinCarousel(direction);
         }
     }
@@ -329,6 +341,10 @@ carousel.addEventListener('touchend', e => {
         let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 50;
         
         if (isForceModeActive || isFastSwipe) {
+            // 中斷原生的慣性滑動
+            carousel.style.overflowX = 'hidden';
+            void carousel.offsetWidth;
+            carousel.style.overflowX = 'auto';
             spinCarousel(direction);
         }
     }
