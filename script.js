@@ -299,7 +299,8 @@ carousel.addEventListener('mouseup', (e) => {
     
     if (Math.abs(distance) > 20) {
         let direction = distance > 0 ? -1 : 1;
-        let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 50;
+        // 放寬條件：時間 < 600ms，距離 > 30px
+        let isFastSwipe = swipeTime < 600 && Math.abs(distance) > 30;
         
         if (isForceModeActive || isFastSwipe) {
             // 中斷原生的慣性滑動
@@ -338,7 +339,8 @@ carousel.addEventListener('touchend', e => {
     
     if (Math.abs(distance) > 20) {
         let direction = distance > 0 ? -1 : 1;
-        let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 50;
+        // 放寬條件：時間 < 600ms，距離 > 30px
+        let isFastSwipe = swipeTime < 600 && Math.abs(distance) > 30;
         
         if (isForceModeActive || isFastSwipe) {
             // 中斷原生的慣性滑動
