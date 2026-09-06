@@ -54,7 +54,7 @@ let isForceModeActive = false;
 
 function spinCarousel(direction) {
     const itemWidth = carousel.clientWidth;
-    const cardsToSpin = 12; // 增加張數，讓動畫有更多時間減速
+    const cardsToSpin = 8; // 張數改為 8 張，配合 cubic 曲線讓起步時不會快到看不清
     
     const startScroll = carousel.scrollLeft;
     let currentIndex = Math.round(startScroll / itemWidth);
@@ -92,17 +92,17 @@ function spinCarousel(direction) {
     // 關閉 snap 避免打斷手動動畫
     carousel.style.scrollSnapType = 'none';
 
-    // easeOutQuint 曲線，起步極快，後面非常緩慢地停下 (還原拉霸感)
-    function easeOutQuint(t, b, c, d) {
+    // easeOutCubic 曲線：起步速度較為平緩，可以清楚看到「一張一張滑過去」的視覺效果，最後慢慢停下
+    function easeOutCubic(t, b, c, d) {
         t /= d;
         t--;
-        return c * (t * t * t * t * t + 1) + b;
+        return c * (t * t * t + 1) + b;
     }
 
     function animate(currentTime) {
         const elapsed = currentTime - startTime;
         if (elapsed < duration) {
-            carousel.scrollLeft = easeOutQuint(elapsed, startScroll, targetScroll - startScroll, duration);
+            carousel.scrollLeft = easeOutCubic(elapsed, startScroll, targetScroll - startScroll, duration);
             requestAnimationFrame(animate);
         } else {
             carousel.scrollLeft = targetScroll;
