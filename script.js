@@ -54,50 +54,64 @@ let isForceModeActive = false;
 
 function spinCarousel(direction) {
     const itemWidth = carousel.clientWidth;
-    const cardsToSpin = 8; 
+    const cardsToSpin = 12; // 增加張數，讓動畫有更多時間減速
+    
+    const startScroll = carousel.scrollLeft;
+    let currentIndex = Math.round(startScroll / itemWidth);
+    if (currentlyVisibleCardElement) {
+        currentIndex = parseInt(currentlyVisibleCardElement.dataset.index);
+    }
+    
+    let targetIndex = currentIndex + (cardsToSpin * direction);
+    if (targetIndex >= deck.length) targetIndex = deck.length - 1;
+    if (targetIndex < 0) targetIndex = 0;
     
     if (isForceModeActive) {
         const forceSelect = document.getElementById('force-card-select');
         const forcedValue = forceSelect ? forceSelect.value : null;
         
         if (forcedValue && forcedValue !== 'none') {
-            let currentIndex = -1;
-            if (currentlyVisibleCardElement) {
-                currentIndex = parseInt(currentlyVisibleCardElement.dataset.index);
-            }
-            if (currentIndex !== -1) {
-                let targetIndex = currentIndex + (cardsToSpin * direction);
-                
-                if (targetIndex >= deck.length) targetIndex = deck.length - 1;
-                if (targetIndex < 0) targetIndex = 0;
-                
-                let targetCardEl = carousel.children[targetIndex];
-                if (targetCardEl) {
-                    let front = targetCardEl.querySelector('.card-front');
-                    let forcedCard = deck.find(c => (c.id || c.name) == forcedValue);
-                    if (forcedCard) {
-                        renderCardFront(front, forcedCard);
-                        deck[targetIndex] = forcedCard;
-                        console.log(`強制把第 ${targetIndex} 張變成了`, forcedCard.display);
-                    }
+            let targetCardEl = carousel.children[targetIndex];
+            if (targetCardEl) {
+                let front = targetCardEl.querySelector('.card-front');
+                let forcedCard = deck.find(c => (c.id || c.name) == forcedValue);
+                if (forcedCard) {
+                    renderCardFront(front, forcedCard);
+                    deck[targetIndex] = forcedCard;
+                    console.log(`強制把第 ${targetIndex} 張變成了`, forcedCard.display);
                 }
             }
         }
         isForceModeActive = false;
     }
 
-    // 關閉 snap 避免 iOS 上產生捲動衝突導致中途卡住
+    const targetScroll = targetIndex * itemWidth;
+    const duration = 2500; // 2.5秒的拉霸時間
+    const startTime = performance.now();
+
+    // 關閉 snap 避免打斷手動動畫
     carousel.style.scrollSnapType = 'none';
 
-    carousel.scrollBy({
-        left: itemWidth * cardsToSpin * direction,
-        behavior: 'smooth'
-    });
+    // easeOutQuint 曲線，起步極快，後面非常緩慢地停下 (還原拉霸感)
+    function easeOutQuint(t, b, c, d) {
+        t /= d;
+        t--;
+        return c * (t * t * t * t * t + 1) + b;
+    }
 
-    // 動畫結束後重新開啟 snap
-    setTimeout(() => {
-        carousel.style.scrollSnapType = 'x mandatory';
-    }, 800);
+    function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        if (elapsed < duration) {
+            carousel.scrollLeft = easeOutQuint(elapsed, startScroll, targetScroll - startScroll, duration);
+            requestAnimationFrame(animate);
+        } else {
+            carousel.scrollLeft = targetScroll;
+            // 動畫結束後重新開啟 snap
+            carousel.style.scrollSnapType = 'x mandatory';
+        }
+    }
+    
+    requestAnimationFrame(animate);
 }
 
 const observer = new IntersectionObserver((entries) => {
