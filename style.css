@@ -216,6 +216,18 @@ body, html {
     cursor: pointer;
 }
 
+/* Force Trigger (Top Left) */
+#force-trigger {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 60px;
+    height: 60px;
+    z-index: 9999;
+    cursor: default;
+    background: transparent;
+}
+
 /* Settings & Themes */
 #settings-btn {
     position: absolute;

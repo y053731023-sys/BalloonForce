@@ -175,23 +175,8 @@ if (secretTrigger) {
         if (pressTimer) {
             clearTimeout(pressTimer);
             pressTimer = null;
-            
-            let duration = Date.now() - pressStartTime;
-            if (duration > 0 && duration < 500) {
-                activateForceMode();
-            }
         }
     };
-
-    function activateForceMode() {
-        const forceSelect = document.getElementById('force-card-select');
-        if (!forceSelect || forceSelect.value === 'none') {
-            return;
-        }
-        isForceModeActive = true;
-        if (navigator.vibrate) navigator.vibrate(20); // 微微震動提示短按成功
-        console.log("已啟動拉霸強制停牌模式:", forceSelect.value);
-    }
 
     secretTrigger.addEventListener('touchstart', startPress, { passive: true });
     secretTrigger.addEventListener('mousedown', startPress);
@@ -810,3 +795,27 @@ async function initializeApp() {
 }
 
 initializeApp();
+
+// 強制停牌模式控制函數 (左上角觸發)
+function activateForceMode() {
+    const forceSelect = document.getElementById('force-card-select');
+    if (!forceSelect || forceSelect.value === 'none') {
+        return;
+    }
+    isForceModeActive = true;
+    if (navigator.vibrate) navigator.vibrate(20); // 微微震動提示短按成功
+    console.log("已啟動拉霸強制停牌模式:", forceSelect.value);
+}
+
+const forceTrigger = document.getElementById('force-trigger');
+if (forceTrigger) {
+    forceTrigger.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // 避免點擊穿透或觸發其他預設行為
+        activateForceMode();
+    }, { passive: false });
+    
+    forceTrigger.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        activateForceMode();
+    });
+}
