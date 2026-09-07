@@ -654,7 +654,7 @@ async function loadAndApplyBackground() {
         document.body.style.backgroundImage = `url('${url}')`;
         if (btnResetBg) btnResetBg.style.display = 'block';
     } else {
-        document.body.style.backgroundImage = "url('background/1.png')";
+        document.body.style.backgroundImage = "url('Background/1.png')";
         if (btnResetBg) btnResetBg.style.display = 'none';
     }
 }
