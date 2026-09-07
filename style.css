@@ -13,6 +13,10 @@ body, html {
     height: 100vh;
     overflow: hidden;
     background-color: #111;
+    background-image: url('background/1.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     color: #fff;
 }
 

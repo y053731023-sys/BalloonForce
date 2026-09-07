@@ -1,27 +1,18 @@
 // 資料定義
-const balloonData = [
-    { name: 'Poodle', emoji: '🐩', display: '貴賓狗' },
-    { name: 'Sword', emoji: '🗡️', display: '寶劍' },
-    { name: 'Flower', emoji: '🌸', display: '花朵' },
-    { name: 'Rabbit', emoji: '🐇', display: '兔子' },
-    { name: 'Bear', emoji: '🧸', display: '小熊' },
-    { name: 'Monkey', emoji: '🐒', display: '猴子' },
-    { name: 'Swan', emoji: '🦢', display: '天鵝' },
-    { name: 'Butterfly', emoji: '🦋', display: '蝴蝶' },
-    { name: 'Crown', emoji: '👑', display: '皇冠' },
-    { name: 'Parrot', emoji: '🦜', display: '鸚鵡' },
-    { name: 'Turtle', emoji: '🐢', display: '烏龜' },
-    { name: 'Giraffe', emoji: '🦒', display: '長頸鹿' },
-    { name: 'Heart', emoji: '❤️', display: '愛心' },
-    { name: 'Gun', emoji: '🔫', display: '手槍' },
-    { name: 'Hat', emoji: '🎩', display: '帽子' },
-    { name: 'Dinosaur', emoji: '🦕', display: '恐龍' },
-    { name: 'Motorcycle', emoji: '🏍️', display: '機車' },
-    { name: 'Spider', emoji: '🕷️', display: '蜘蛛' },
-    { name: 'Lollipop', emoji: '🍭', display: '棒棒糖' },
-    { name: 'Dragonfly', emoji: '🪰', display: '蜻蜓' },
-    { name: 'Apple', emoji: '🍎', display: '蘋果' }
+const pictureFiles = [
+    "Hello Kitty.webp", "企鵝.webp", "兔子.webp", "大耳狗.webp", "大象.webp", 
+    "小熊.webp", "小跑車.webp", "布丁狗.webp", "庫洛米.webp", "恐龍.webp", 
+    "愛心棒.webp", "手槍.webp", "摩托車.webp", "斧頭.webp", "棒棒糖.webp", 
+    "海龜.webp", "熱狗.webp", "獅子.webp", "皇冠.webp", "美樂蒂.webp", "花朵.webp", 
+    "蝴蝶.webp", "螺旋寶劍.webp", "貓咪.webp", "貓掌棒.webp", "貴賓狗.webp", 
+    "長頸鹿.webp", "飛機.webp", "魚與釣竿.webp"
 ];
+
+const balloonData = pictureFiles.map(filename => ({
+    name: filename.replace('.webp', ''),
+    url: 'picture/' + filename,
+    display: filename.replace('.webp', '')
+}));
 const balloonDeck = balloonData.map(b => ({ type: 'balloon', ...b }));
 
 
@@ -433,34 +424,26 @@ function renderCardFront(element, card) {
     element.style.backgroundColor = 'white';
     
     if (card.type === 'balloon') {
-        element.style.backgroundImage = 'none';
+        element.style.backgroundImage = `url('${card.url}')`;
+        element.style.backgroundSize = 'cover';
+        element.style.backgroundPosition = 'center';
         element.style.flexDirection = 'column';
-        
-        const emojiWrap = document.createElement('div');
-        emojiWrap.style.width = '85%';
-        emojiWrap.style.aspectRatio = '4 / 3'; 
-        emojiWrap.style.display = 'flex';
-        emojiWrap.style.justifyContent = 'center';
-        emojiWrap.style.alignItems = 'center';
-        emojiWrap.style.fontSize = '80px';
-        emojiWrap.style.backgroundColor = '#f9f9f9';
-        emojiWrap.style.border = '1px solid #ddd';
-        emojiWrap.style.borderRadius = '6px';
-        emojiWrap.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-        emojiWrap.style.marginBottom = '24px';
-        emojiWrap.textContent = card.emoji;
-        
-        element.appendChild(emojiWrap);
+        element.style.justifyContent = 'flex-end';
+        element.style.alignItems = 'center';
         
         const label = document.createElement('div');
         label.textContent = card.display;
-        label.style.fontSize = '32px';
+        label.style.width = '100%';
+        label.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        label.style.color = '#fff';
+        label.style.fontSize = '26px';
         label.style.fontWeight = '600';
-        label.style.color = '#333';
-        label.style.letterSpacing = '4px';
         label.style.textAlign = 'center';
-        label.style.padding = '0 10px';
+        label.style.padding = '12px 0';
+        label.style.letterSpacing = '2px';
         label.style.wordBreak = 'break-word';
+        label.style.borderBottomLeftRadius = 'inherit';
+        label.style.borderBottomRightRadius = 'inherit';
         
         element.appendChild(label);
     } else if (card.type === 'custom') {
@@ -606,10 +589,11 @@ const customImageInput = document.getElementById('custom-image-input');
 const btnUploadCustom = document.getElementById('btn-upload-custom');
 const customImageCount = document.getElementById('custom-image-count');
 
-// --- IndexedDB for Custom Images ---
+// --- IndexedDB for Custom Images & Background ---
 const DB_NAME = 'MagicTrickDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'customImages';
+const BG_STORE_NAME = 'backgroundStore';
 let db;
 
 function initDB() {
@@ -622,8 +606,57 @@ function initDB() {
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             }
+            if (!db.objectStoreNames.contains(BG_STORE_NAME)) {
+                db.createObjectStore(BG_STORE_NAME, { keyPath: 'id' });
+            }
         };
     });
+}
+
+function saveBackgroundToDB(file) {
+    return new Promise((resolve, reject) => {
+        if (!db) return resolve();
+        const tx = db.transaction([BG_STORE_NAME], 'readwrite');
+        const store = tx.objectStore(BG_STORE_NAME);
+        store.put({ id: 'custom-bg', file: file });
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function getBackgroundFromDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) return resolve(null);
+        const tx = db.transaction([BG_STORE_NAME], 'readonly');
+        const store = tx.objectStore(BG_STORE_NAME);
+        const request = store.get('custom-bg');
+        request.onsuccess = () => resolve(request.result ? request.result.file : null);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function deleteBackgroundFromDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) return resolve();
+        const tx = db.transaction([BG_STORE_NAME], 'readwrite');
+        const store = tx.objectStore(BG_STORE_NAME);
+        store.delete('custom-bg');
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e.target.error);
+    });
+}
+
+async function loadAndApplyBackground() {
+    const file = await getBackgroundFromDB();
+    const btnResetBg = document.getElementById('btn-reset-bg');
+    if (file) {
+        const url = URL.createObjectURL(file);
+        document.body.style.backgroundImage = `url('${url}')`;
+        if (btnResetBg) btnResetBg.style.display = 'block';
+    } else {
+        document.body.style.backgroundImage = "url('background/1.png')";
+        if (btnResetBg) btnResetBg.style.display = 'none';
+    }
 }
 
 function addCustomImagesToDB(files) {
@@ -755,11 +788,39 @@ if (btnUploadCustom && customImageInput) {
     });
 }
 
+const customBgInput = document.getElementById('custom-bg-input');
+const btnUploadBg = document.getElementById('btn-upload-bg');
+const btnResetBg = document.getElementById('btn-reset-bg');
+
+if (btnUploadBg && customBgInput) {
+    btnUploadBg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        customBgInput.click();
+    });
+
+    customBgInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        await saveBackgroundToDB(file);
+        await loadAndApplyBackground();
+        customBgInput.value = '';
+    });
+}
+
+if (btnResetBg) {
+    btnResetBg.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await deleteBackgroundFromDB();
+        await loadAndApplyBackground();
+    });
+}
+
 async function initializeApp() {
     try {
         await initDB();
         const records = await loadCustomImagesFromDB();
         processCustomFiles(records || []);
+        await loadAndApplyBackground();
     } catch (e) {
         console.error("IndexedDB error:", e);
     }
