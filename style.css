@@ -265,3 +265,7 @@ body.theme-balloon .card-back {
                 repeating-linear-gradient(45deg, #e67e22 0, #e67e22 2px, #ff8c00 2px, #ff8c00 4px);
     background-color: #ff8c00;
 }
+
+/* Gesture movement is handled by script.js, including on iPhone and iPad. */
+#carousel, #carousel * { touch-action: none; }
+#carousel { scroll-behavior: auto; }

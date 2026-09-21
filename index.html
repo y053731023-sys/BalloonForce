@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Magic Card Selection</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="settings-fullscreen.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap" rel="stylesheet">
 </head>
 
@@ -33,18 +34,19 @@
         <div id="settings-modal" class="modal">
             <div class="modal-content">
                 <h3>後台設定</h3>
+                <label class="settings-theme-label" for="theme-select">顯示主題</label>
                 <select id="theme-select">
                     <option value="theme-balloon">造型氣球</option>
                     <option value="theme-custom">自訂圖片</option>
                 </select>
                 <div id="force-card-settings" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444;">
-                    <label style="color: #ccc; font-size: 14px; display: block; margin-bottom: 5px; text-align: left;">強制設定 (短按觸發)</label>
+                    <label for="force-card-select" style="color: #ccc; font-size: 14px; display: block; margin-bottom: 5px; text-align: left;">強制設定 (短按觸發)</label>
                     <select id="force-card-select">
                         <option value="none">無 (不強制)</option>
                     </select>
                 </div>
                 <div id="background-settings" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444;">
-                    <label style="color: #ccc; font-size: 14px; display: block; margin-bottom: 5px; text-align: left;">自訂背景圖片</label>
+                    <label for="custom-bg-input" style="color: #ccc; font-size: 14px; display: block; margin-bottom: 5px; text-align: left;">自訂背景圖片</label>
                     <input type="file" id="custom-bg-input" accept="image/*" style="display: none;">
                     <button id="btn-upload-bg" style="width: 100%; background: #28a745; color: white; padding: 12px; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 10px;">更換背景</button>
                     <button id="btn-reset-bg" style="width: 100%; background: #dc3545; color: white; padding: 12px; border: none; border-radius: 8px; cursor: pointer; display: none;">重置為預設背景</button>
@@ -53,6 +55,7 @@
                     <input type="file" id="custom-image-input" multiple accept="image/*" style="display: none;">
                     <button id="btn-upload-custom"
                         style="width: 100%; background: #007aff; color: white; padding: 12px; border: none; border-radius: 8px; cursor: pointer;">新增圖片</button>
+                    <button id="btn-delete-all-custom" type="button" disabled>全部刪除自訂圖片</button>
                     <div id="custom-image-count"
                         style="margin-top: 10px; font-size: 14px; text-align: center; color: #ccc;">目前已上傳: 0 張</div>
                     <div id="custom-image-list"

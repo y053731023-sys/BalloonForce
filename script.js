@@ -43,6 +43,35 @@ let touchStartIndex = 0;
 let swipeStartTime = 0;
 let isForceModeActive = false;
 
+let carouselAnimation = null;
+
+function stopCarouselAnimation() {
+    if (carouselAnimation !== null) cancelAnimationFrame(carouselAnimation);
+    carouselAnimation = null;
+    clearTimeout(viewTimer);
+    clearTimeout(mechanism2Timer);
+}
+
+function animateToCard(index, duration) {
+    stopCarouselAnimation();
+    const start = carousel.scrollLeft;
+    const target = Math.max(0, Math.min(deck.length - 1, index)) * carousel.clientWidth;
+    const started = performance.now();
+    carousel.style.scrollSnapType = 'none';
+    function frame(now) {
+        const progress = Math.min(1, (now - started) / duration);
+        carousel.scrollLeft = start + (target - start) * (1 - Math.pow(1 - progress, 3));
+        if (progress < 1) {
+            carouselAnimation = requestAnimationFrame(frame);
+        } else {
+            carouselAnimation = null;
+            carousel.style.scrollSnapType = 'x mandatory';
+            updateSettledCard();
+        }
+    }
+    carouselAnimation = requestAnimationFrame(frame);
+}
+
 function spinCarousel(direction) {
     const itemWidth = carousel.clientWidth;
     const cardsToSpin = 12; // 張數改回 12 張，維持足夠的距離感
@@ -76,71 +105,38 @@ function spinCarousel(direction) {
         isForceModeActive = false;
     }
 
-    const targetScroll = targetIndex * itemWidth;
-    const duration = 2500; // 2.5秒的拉霸時間
-    const startTime = performance.now();
-
-    // 關閉 snap 避免打斷手動動畫
-    carousel.style.scrollSnapType = 'none';
-
-    // easeOutCubic 曲線：起步速度較為平緩，可以清楚看到「一張一張滑過去」的視覺效果，最後慢慢停下
-    function easeOutCubic(t, b, c, d) {
-        t /= d;
-        t--;
-        return c * (t * t * t + 1) + b;
-    }
-
-    function animate(currentTime) {
-        const elapsed = currentTime - startTime;
-        if (elapsed < duration) {
-            carousel.scrollLeft = easeOutCubic(elapsed, startScroll, targetScroll - startScroll, duration);
-            requestAnimationFrame(animate);
-        } else {
-            carousel.scrollLeft = targetScroll;
-            // 動畫結束後重新開啟 snap
-            carousel.style.scrollSnapType = 'x mandatory';
-        }
-    }
-    
-    requestAnimationFrame(animate);
+    animateToCard(targetIndex, 2500);
 }
 
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            currentlyVisibleCardElement = entry.target;
-            const index = parseInt(entry.target.dataset.index);
-            currentlyVisibleCard = deck[index];
-            
-            clearTimeout(viewTimer);
-            if (isRecordingActive && !hasRecorded) {
-                viewTimer = setTimeout(() => {
-                    secretChosenCard = currentlyVisibleCard;
-                    hasRecorded = true;
-                    isRecordingActive = false;
-                    if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
-                    console.log("背景紀錄觀眾的牌:", secretChosenCard.display);
-                }, 5000);
-            }
-            
-            // 第二機制：觀眾打亂後停在某張牌3秒
-            clearTimeout(mechanism2Timer);
-            if (hasRecorded && !mechanism2Ready && !isRecordingActive && secretChosenCard) {
-                mechanism2Timer = setTimeout(() => {
-                    mechanism2Ready = true;
-                    swipeSequence = 0;
-                    firstSwipeDirection = null;
-                    if (navigator.vibrate) navigator.vibrate(20);
-                    console.log("第二機制已啟動，等待首次滑動");
-                }, 3000);
-            }
-        } else {
-            if (entry.target === currentlyVisibleCardElement) {
-                clearTimeout(viewTimer);
-                clearTimeout(mechanism2Timer);
-            }
-        }
-    });
+function updateSettledCard() {
+    clearTimeout(viewTimer);
+    clearTimeout(mechanism2Timer);
+    if (isDraggingCarousel || carouselAnimation !== null || !carousel.clientWidth) return;
+    const index = Math.round(carousel.scrollLeft / carousel.clientWidth);
+    currentlyVisibleCardElement = carousel.children[index] || null;
+    currentlyVisibleCard = deck[index] || null;
+    if (!currentlyVisibleCard) return;
+    if (isRecordingActive && !hasRecorded) {
+        const card = currentlyVisibleCard;
+        viewTimer = setTimeout(() => {
+            secretChosenCard = card;
+            hasRecorded = true;
+            isRecordingActive = false;
+            if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+        }, 5000);
+    }
+    if (hasRecorded && !mechanism2Ready && !isRecordingActive && secretChosenCard) {
+        mechanism2Timer = setTimeout(() => {
+            mechanism2Ready = true;
+            swipeSequence = 0;
+            firstSwipeDirection = null;
+            if (navigator.vibrate) navigator.vibrate(20);
+        }, 3000);
+    }
+}
+
+const observer = new IntersectionObserver(() => {
+    updateSettledCard();
 }, { threshold: 0.6 });
 
 // 綁定隱藏觸發區事件
@@ -178,6 +174,9 @@ if (secretTrigger) {
     secretTrigger.addEventListener('mouseleave', cancelPress);
 
     function activateSecretMode() {
+        cancelCardReveal();
+        stopCarouselAnimation();
+        isForceModeActive = false;
         if (navigator.vibrate) navigator.vibrate([30, 30, 30]); // 特殊震動提示
         isRecordingActive = true;
         hasRecorded = false;
@@ -225,126 +224,133 @@ function initCarousel() {
         cardEl.appendChild(front);
         item.appendChild(cardEl);
         
-        item.addEventListener('click', (e) => {
-            if (hasDragged) return;
-            if (secretChosenCard && currentlyVisibleCard && currentlyVisibleCard !== secretChosenCard) {
-                if (navigator.vibrate) navigator.vibrate([50]);
-                cardEl.classList.add('magic-change');
-                
-                const targetSecretCard = secretChosenCard;
-                const clickedCardIndex = parseInt(item.dataset.index);
-                const originalCard = deck[clickedCardIndex];
-
-                setTimeout(() => {
-                    renderCardFront(front, targetSecretCard);
-                    
-                    // 找到原本觀眾那張牌的 DOM，把它變成這張點錯的牌，避免出現兩張一樣的牌
-                    const secretIndex = deck.findIndex(c => c === targetSecretCard);
-                    if (secretIndex !== -1) {
-                        const originalSecretDom = carousel.children[secretIndex].querySelector('.card-front');
-                        if (originalSecretDom) {
-                            renderCardFront(originalSecretDom, originalCard);
-                        }
-                        // 更新陣列資料
-                        deck[clickedCardIndex] = targetSecretCard;
-                        deck[secretIndex] = originalCard;
-                    }
-
-                    // 變牌後清除紀錄，結束所有機制
-                    secretChosenCard = null;
-                    currentlyVisibleCard = targetSecretCard;
-                }, 300);
-            }
-        });
-
         observer.observe(item);
         carousel.appendChild(item);
     });
 }
 
-// 實作桌機拖曳滾動 (Drag to scroll)
-let startScrollX;
-let scrollLeft;
+// Handle taps at pointer release: pointer capture routes clicks to the carousel,
+// so individual card click listeners cannot reliably receive them.
+let cardRevealTimer = null;
+let revealingCardElement = null;
 
-carousel.addEventListener('mousedown', (e) => {
+function cancelCardReveal() {
+    clearTimeout(cardRevealTimer);
+    cardRevealTimer = null;
+    if (revealingCardElement) revealingCardElement.classList.remove('magic-change');
+    revealingCardElement = null;
+}
+
+function revealRememberedCard(index) {
+    if (cardRevealTimer !== null || !secretChosenCard) return;
+    const item = carousel.children[index];
+    const originalCard = deck[index];
+    if (!item || !originalCard || originalCard === secretChosenCard) return;
+    const cardEl = item.querySelector('.card');
+    const front = item.querySelector('.card-front');
+    if (!cardEl || !front) return;
+    const targetSecretCard = secretChosenCard;
+    revealingCardElement = cardEl;
+    cardEl.classList.remove('magic-change');
+    void cardEl.offsetWidth;
+    cardEl.classList.add('magic-change');
+    if (navigator.vibrate) navigator.vibrate([50]);
+    cardRevealTimer = setTimeout(() => {
+        cardRevealTimer = null;
+        // Ignore an old reveal if the theme or magic mode changed meanwhile.
+        if (secretChosenCard !== targetSecretCard || deck[index] !== originalCard ||
+            carousel.children[index] !== item) return;
+        const secretIndex = deck.indexOf(targetSecretCard);
+        if (secretIndex !== -1 && secretIndex !== index) {
+            const originalSecretFront = carousel.children[secretIndex].querySelector('.card-front');
+            if (originalSecretFront) renderCardFront(originalSecretFront, originalCard);
+            deck[secretIndex] = originalCard;
+        }
+        renderCardFront(front, targetSecretCard);
+        deck[index] = targetSecretCard;
+        secretChosenCard = null;
+        hasRecorded = false;
+        isRecordingActive = false;
+        mechanism2Ready = false;
+        swipeSequence = 0;
+        firstSwipeDirection = null;
+        clearTimeout(viewTimer);
+        clearTimeout(mechanism2Timer);
+        currentlyVisibleCard = deck[Math.round(carousel.scrollLeft / carousel.clientWidth)] || null;
+    }, 300);
+}
+
+// Unified mouse / iPhone / iPad gestures. Native momentum is disabled so
+// a remembered-card gesture can never move more than one card.
+let activePointer = null;
+let gestureMode = 'normal';
+
+function getSwipeMode() {
+    if (isForceModeActive) return 'force';
+    if (isRecordingActive || secretChosenCard !== null) return 'remember';
+    return 'normal';
+}
+
+function beginCarouselGesture(e) {
+    if (activePointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    stopCarouselAnimation();
+    activePointer = e.pointerId;
     isDraggingCarousel = true;
     hasDragged = false;
-    startScrollX = e.pageX - carousel.offsetLeft;
-    scrollLeft = carousel.scrollLeft;
-    touchStartX = e.pageX;
+    touchStartX = e.clientX;
+    touchEndX = e.clientX;
     swipeStartTime = Date.now();
-    if (currentlyVisibleCardElement) {
-        touchStartIndex = parseInt(currentlyVisibleCardElement.dataset.index);
-    }
-});
-carousel.addEventListener('mouseleave', () => {
-    isDraggingCarousel = false;
-});
-carousel.addEventListener('mouseup', (e) => {
-    isDraggingCarousel = false;
-    touchEndX = e.pageX;
-    
-    let swipeTime = Date.now() - swipeStartTime;
-    let distance = touchEndX - touchStartX;
-    
-    if (Math.abs(distance) > 20) {
-        let direction = distance > 0 ? -1 : 1;
-        // 快滑(拉霸)條件：接觸時間短 (小於 300ms) 且 滑動距離短 (介於 20px 到 150px 之間)
-        // 若時間長或距離長，則視為一般滑動
-        let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 20 && Math.abs(distance) < 150;
-        
-        if (isForceModeActive || isFastSwipe) {
-            // 中斷原生的慣性滑動
-            carousel.style.overflowX = 'hidden';
-            void carousel.offsetWidth;
-            carousel.style.overflowX = 'auto';
-            spinCarousel(direction);
-        }
-    }
-    
-    handleSwipe(touchStartX, touchEndX, touchStartIndex);
-});
-carousel.addEventListener('mousemove', (e) => {
-    if (!isDraggingCarousel) return;
-    e.preventDefault();
-    const x = e.pageX - carousel.offsetLeft;
-    if (Math.abs(x - startScrollX) > 5) hasDragged = true;
-    const walk = (x - startScrollX) * 2; // 滾動速度
-    carousel.scrollLeft = scrollLeft - walk;
-});
+    touchStartIndex = Math.max(0, Math.min(deck.length - 1,
+        Math.round(carousel.scrollLeft / carousel.clientWidth)));
+    gestureMode = getSwipeMode();
+    carousel.style.scrollSnapType = 'none';
+    carousel.setPointerCapture(e.pointerId);
+}
 
-// 手機滑動支援 (Touch events)
-carousel.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].clientX;
-    swipeStartTime = Date.now();
-    if (currentlyVisibleCardElement) {
-        touchStartIndex = parseInt(currentlyVisibleCardElement.dataset.index);
-    }
-}, { passive: true });
+function moveCarouselGesture(e) {
+    if (e.pointerId !== activePointer) return;
+    touchEndX = e.clientX;
+    const distance = touchEndX - touchStartX;
+    if (Math.abs(distance) > 10) hasDragged = true;
+    const width = carousel.clientWidth;
+    const drag = Math.max(-width, Math.min(width, distance));
+    carousel.scrollLeft = touchStartIndex * width - drag;
+}
 
-carousel.addEventListener('touchend', e => {
-    touchEndX = e.changedTouches[0].clientX;
-    
-    let swipeTime = Date.now() - swipeStartTime;
-    let distance = touchEndX - touchStartX;
-    
-    if (Math.abs(distance) > 20) {
-        let direction = distance > 0 ? -1 : 1;
-        // 快滑(拉霸)條件：接觸時間短 (小於 300ms) 且 滑動距離短 (介於 20px 到 150px 之間)
-        // 若時間長或距離長，則視為一般滑動
-        let isFastSwipe = swipeTime < 300 && Math.abs(distance) > 20 && Math.abs(distance) < 150;
-        
-        if (isForceModeActive || isFastSwipe) {
-            // 中斷原生的慣性滑動
-            carousel.style.overflowX = 'hidden';
-            void carousel.offsetWidth;
-            carousel.style.overflowX = 'auto';
-            spinCarousel(direction);
-        }
+function finishCarouselGesture(e, cancelled = false) {
+    if (e.pointerId !== activePointer) return;
+    activePointer = null;
+    isDraggingCarousel = false;
+    if (carousel.hasPointerCapture(e.pointerId)) carousel.releasePointerCapture(e.pointerId);
+    touchEndX = e.clientX;
+    const distance = touchEndX - touchStartX;
+    const elapsed = Math.max(1, Date.now() - swipeStartTime);
+    if (cancelled || Math.abs(distance) <= 20) {
+        const isTap = !cancelled && !hasDragged && Math.abs(distance) <= 10 && elapsed < 500;
+        animateToCard(touchStartIndex, 180);
+        if (isTap) revealRememberedCard(touchStartIndex);
+        return;
     }
-    
-    handleSwipe(touchStartX, touchEndX, touchStartIndex);
+    hasDragged = true;
+    const direction = distance > 0 ? -1 : 1;
+    const fast = elapsed < 300 && Math.abs(distance) / elapsed >= 0.5;
+    if (gestureMode === 'force' || (gestureMode === 'normal' && fast)) {
+        currentlyVisibleCardElement = carousel.children[touchStartIndex];
+        spinCarousel(direction);
+    } else {
+        handleSwipe(touchStartX, touchEndX, touchStartIndex);
+        animateToCard(touchStartIndex + direction, 260);
+    }
+}
+
+carousel.addEventListener('pointerdown', beginCarouselGesture);
+carousel.addEventListener('pointermove', moveCarouselGesture);
+carousel.addEventListener('pointerup', finishCarouselGesture);
+carousel.addEventListener('pointercancel', e => finishCarouselGesture(e, true));
+carousel.addEventListener('lostpointercapture', e => {
+    if (e.pointerId === activePointer) finishCarouselGesture(e, true);
 });
+carousel.addEventListener('dragstart', e => e.preventDefault());
 
 function handleSwipe(startX, endX, startIndex) {
     if (!mechanism2Ready) return;
@@ -456,13 +462,15 @@ function renderCardFront(element, card) {
         } else {
             img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         }
-        img.style.width = '85%';
-        img.style.aspectRatio = '4 / 3'; 
-        img.style.objectFit = 'contain';
-        img.style.border = '1px solid #ddd';
-        img.style.borderRadius = '6px';
-        img.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-        img.style.marginBottom = card.url ? '0' : '24px';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.display = card.url ? 'block' : 'none';
+        img.style.aspectRatio = 'auto';
+        img.style.objectFit = 'cover';
+        img.style.border = '0';
+        img.style.borderRadius = 'inherit';
+        img.style.boxShadow = 'none';
+        img.style.margin = '0';
         
         element.appendChild(img);
         
@@ -484,6 +492,13 @@ function renderCardFront(element, card) {
 
 
 function loadDeckTheme(theme) {
+    cancelCardReveal();
+    stopCarouselAnimation();
+    activePointer = null;
+    isDraggingCarousel = false;
+    isForceModeActive = false;
+    currentlyVisibleCardElement = null;
+    carousel.style.scrollSnapType = 'x mandatory';
     let baseDeck;
     if (theme === 'theme-custom') {
         baseDeck = [...customDeck];
@@ -587,6 +602,7 @@ if (forceSelectForEvents) {
 const customImageSettings = document.getElementById('custom-image-settings');
 const customImageInput = document.getElementById('custom-image-input');
 const btnUploadCustom = document.getElementById('btn-upload-custom');
+const btnDeleteAllCustom = document.getElementById('btn-delete-all-custom');
 const customImageCount = document.getElementById('custom-image-count');
 
 // --- IndexedDB for Custom Images & Background ---
@@ -681,6 +697,17 @@ function deleteCustomImageFromDB(id) {
     });
 }
 
+function deleteAllCustomImagesFromDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('圖片資料庫尚未準備好'));
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('刪除失敗'));
+        tx.onabort = () => reject(tx.error || new Error('刪除已中止'));
+    });
+}
+
 function loadCustomImagesFromDB() {
     return new Promise((resolve, reject) => {
         if (!db) return resolve([]);
@@ -765,10 +792,33 @@ function processCustomFiles(records) {
         }
     });
     
+    if (btnDeleteAllCustom) btnDeleteAllCustom.disabled = customData.length === 0;
     customDeck = customData.map(c => ({ type: 'custom', ...c }));
     if (customImageCount) {
         customImageCount.innerHTML = `目前已上傳: ${customData.length} 張`;
     }
+}
+
+if (btnDeleteAllCustom) {
+    btnDeleteAllCustom.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (btnDeleteAllCustom.disabled || customData.length === 0) return;
+        btnDeleteAllCustom.disabled = true;
+        if (btnUploadCustom) btnUploadCustom.disabled = true;
+        try {
+            await deleteAllCustomImagesFromDB();
+            if (themeSelect && themeSelect.value === 'theme-custom') {
+                localStorage.setItem('magic-force-card', 'none');
+            }
+            await reloadCustomImages();
+        } catch (error) {
+            console.error('無法刪除全部自訂圖片', error);
+            alert('未能完成刪除，請稍後再試。');
+        } finally {
+            btnDeleteAllCustom.disabled = customData.length === 0;
+            if (btnUploadCustom) btnUploadCustom.disabled = false;
+        }
+    });
 }
 
 if (btnUploadCustom && customImageInput) {
@@ -863,6 +913,14 @@ function activateForceMode() {
     if (!forceSelect || forceSelect.value === 'none') {
         return;
     }
+    stopCarouselAnimation();
+    isRecordingActive = false;
+    hasRecorded = false;
+    secretChosenCard = null;
+    mechanism2Ready = false;
+    swipeSequence = 0;
+    firstSwipeDirection = null;
+    cancelCardReveal();
     isForceModeActive = true;
     if (navigator.vibrate) navigator.vibrate(20); // 微微震動提示短按成功
     console.log("已啟動拉霸強制停牌模式:", forceSelect.value);
