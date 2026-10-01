@@ -5,7 +5,7 @@ const pictureFiles = [
     "愛心棒.webp", "手槍.webp", "摩托車.webp", "斧頭.webp", "棒棒糖.webp", 
     "海龜.webp", "熱狗.webp", "獅子.webp", "皇冠.webp", "美樂蒂.webp", "花朵.webp", 
     "蝴蝶.webp", "螺旋寶劍.webp", "貓咪.webp", "貓掌棒.webp", "貴賓狗.webp", 
-    "長頸鹿.webp", "飛機.webp", "魚與釣竿.webp"
+    "長頸鹿.webp", "飛機.webp", "魚與釣竿.webp", "玫瑰花.webp"
 ];
 
 const balloonData = pictureFiles.map(filename => ({
